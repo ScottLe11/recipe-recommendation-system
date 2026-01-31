@@ -7,7 +7,7 @@ Download Expo Go App
 
 Start guide:
 1. run this -> git clone https://github.com/ScottLe11/recipe-recommendation-system.git
-2. go into into project dir
+2. go into project dir
 3. run this -> npm install
 
 Running / testing project:
