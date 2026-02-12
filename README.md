@@ -16,3 +16,4 @@ run this -> npx expo start (qr code should pop up to scan)
 
 Remember to reference our proposal:
 https://docs.google.com/document/d/1D_NZegu8TyOkK8v9wvuvmZYA0EOAOAaV/edit
+
