@@ -30,6 +30,10 @@ Project phases:
 
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from './screens/HomeScreen';
 import IngredientsScreen from './screens/IngredientsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
@@ -37,41 +41,143 @@ import RecipeScreen from './screens/RecipeScreen';
 import * as userProfile from '../src/userProfile';
 import PreferencesScreen from './screens/PreferencesScreen';
 
-const mockRecipe = {
-    id: "42198",
-    name: "better than sex strawberries",
-    minutes: 1460,
-    difficulty: "Advanced",
-    ingredients: [
-      "vanilla wafers", 
-      "butter", 
-      "powdered sugar", 
-      "eggs", 
-      "whipping cream", 
-      "strawberry", 
-      "walnuts"
-    ],
-    steps: [
-      "crush vanilla wafers into fine crumbs and line a square 8\" x 8\" pan",
-      "mix butter or margarine and sugar",
-      "add beaten eggs",
-      "spread the mixture over the wafer crumbs",
-      "crush strawberries and spread over sugar, egg, and butter mixture",
-      "cover strawberries with whipped cream",
-      "sprinkle with chopped nuts",
-      "chill 24 hours"
-    ]
-  };
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
+// Home Stack Navigator (so recipe details can be shown)
+function HomeStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#FF6B6B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="HomeMain" 
+        component={HomeScreen}
+        options={{ title: 'Recommendations' }}
+      />
+      <Stack.Screen 
+        name="RecipeDetail" 
+        component={RecipeScreen}
+        options={{ title: 'Recipe Details' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Favorites Stack Navigator (with recipe detail)
+function FavoritesStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#FF6B6B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="FavoritesMain" 
+        component={FavoritesScreen}
+        options={{ title: 'My Favorites' }}
+      />
+      <Stack.Screen 
+        name="RecipeDetail" 
+        component={RecipeScreen}
+        options={{ title: 'Recipe Details' }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
-
   return (
-     <HomeScreen/>
-    // <IngredientsScreen/>
-    // <FavoritesScreen/>
-    // <PreferencesScreen/>
-  );
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName;
 
-  // return <RecipeScreen route={{ params: { recipe: mockRecipe } }} />;
+            if (route.name === 'Home') {
+              iconName = focused ? 'home' : 'home-outline';
+            } else if (route.name === 'Ingredients') {
+              iconName = focused ? 'basket' : 'basket-outline';
+            } else if (route.name === 'Favorites') {
+              iconName = focused ? 'heart' : 'heart-outline';
+            } else if (route.name === 'Preferences') {
+              iconName = focused ? 'settings' : 'settings-outline';
+            }
+
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: '#FF6B6B',
+          tabBarInactiveTintColor: 'gray',
+          tabBarStyle: {
+            backgroundColor: '#FFFFFF',
+            borderTopWidth: 1,
+            borderTopColor: '#E0E0E0',
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: 60,
+          },
+          headerShown: false, // Hide header for tab screens (we have headers in stacks)
+        })}
+      >
+        <Tab.Screen 
+          name="Home" 
+          component={HomeStack}
+          options={{ title: 'Home' }}
+        />
+        <Tab.Screen 
+          name="Ingredients" 
+          component={IngredientsScreen}
+          options={{ 
+            title: 'Pantry',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#FF6B6B',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}
+        />
+        <Tab.Screen 
+          name="Favorites" 
+          component={FavoritesStack}
+          options={{ 
+            title: 'Favorites',
+            headerShown: false, // Hide header for tab screens
+          }}
+        />
+        <Tab.Screen 
+          name="Preferences" 
+          component={PreferencesScreen}
+          options={{ 
+            title: 'Settings',
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#FF6B6B',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}
+        />
+      </Tab.Navigator>
+      <StatusBar style="light" />
+    </NavigationContainer>
+  );
 }

@@ -5,24 +5,49 @@ import {
   View, 
   ScrollView, 
   SafeAreaView,
-  ActivityIndicator 
+  ActivityIndicator,
+  TouchableOpacity
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import services
 import * as pantryService from '../../src/pantryService';
+import * as preferenceService from '../../src/preferenceService';
 
 const RecipeScreen = ({ route }) => {
   const recipe = route?.params?.recipe || {};
   const [pantryItems, setPantryItems] = useState([]);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     const items = pantryService.getPantryIngredientNames().map(i => i.toLowerCase());
     setPantryItems(items);
   }, []);
 
+  // Refresh like status whenever screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const likedRecipes = preferenceService.getLikedRecipes();
+      setIsLiked(likedRecipes.includes(recipe.id));
+      console.log(`RecipeScreen focused: ${recipe.name} - Liked: ${likedRecipes.includes(recipe.id)}`);
+    }, [recipe.id])
+  );
+
   const hasIngredient = (ingredient) => {
     return pantryItems.some(item => ingredient.toLowerCase().includes(item));
+  };
+
+  const handleLikePress = () => {
+    if (isLiked) {
+      // Unlike recipe
+      preferenceService.recordAction(recipe.id, 'unliked');
+    } else {
+      // Like recipe
+      preferenceService.recordAction(recipe.id, 'liked');
+    }
+    setIsLiked(!isLiked);
+    console.log(`Recipe ${recipe.name} ${!isLiked ? 'liked' : 'unliked'}`);
   };
 
   if (!recipe.name) {
@@ -51,11 +76,22 @@ const RecipeScreen = ({ route }) => {
             </View>
           </View>
 
+          <TouchableOpacity onPress={handleLikePress} style={styles.likeButton}>
+            <Ionicons 
+              name={isLiked ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isLiked ? "#FF6B6B" : "#636E72"} 
+            />
+            <Text style={[styles.likeButtonText, { color: isLiked ? "#FF6B6B" : "#636E72" }]}>
+              {isLiked ? 'Liked' : 'Like Recipe'}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.divider} />
 
           <Text style={styles.sectionHeader}>Ingredients</Text>
           <View style={styles.ingredientsList}>
-            {recipe.ingredients?.map((ing, index) => (
+            {recipe.ingredients_array?.map((ing, index) => (
               <View key={index} style={styles.ingredientRow}>
                 <Ionicons 
                   name={hasIngredient(ing) ? "checkmark-circle" : "close-circle"} 
@@ -75,7 +111,7 @@ const RecipeScreen = ({ route }) => {
           <View style={styles.divider} />
 
           <Text style={styles.sectionHeader}>Instructions</Text>
-          {recipe.steps?.map((step, index) => (
+          {recipe.steps_array?.map((step, index) => (
             <View key={index} style={styles.stepRow}>
               <Text style={styles.simpleStepNumber}>{index + 1}.</Text>
               <Text style={styles.stepText}>{step}</Text>
@@ -129,6 +165,21 @@ const styles = StyleSheet.create({
   },
   metaText: {
     color: '#636E72',
+    fontWeight: '600',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#F8F8F8',
+  },
+  likeButtonText: {
+    fontSize: 16,
     fontWeight: '600',
   },
   divider: {

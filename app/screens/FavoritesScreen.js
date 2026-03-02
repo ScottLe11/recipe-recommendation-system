@@ -8,54 +8,85 @@ import {
   SafeAreaView,
   ActivityIndicator 
 } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import API and specific services
 import RecipeAPI from '../../src/api'; 
 import * as recipeService from '../../src/recipeService';
-import { getUserProfile } from '../../src/userProfile'; // Using named export
+import * as preferenceService from '../../src/preferenceService';
 
 const FavoritesScreen = () => {
+  const navigation = useNavigation();
   const [favorites, setFavorites] = useState([]);
   const [userGoals, setUserGoals] = useState({ calorieGoal: 2000 });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        console.log("Syncing Profile and Favorites...");
-        await RecipeAPI.initialize();
-        
-        // 1. Get the profile 
-        const profile = getUserProfile();
-        
-        // 2. Extract the liked IDs from the nested structure 
-        const likedIds = profile.history.likedRecipes || [];
-        setUserGoals({ calorieGoal: profile.nutritionGoals.dailyCalories });
+  // Load favorites whenever screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
 
-        // 3. Filter the database
-        const allRecipes = recipeService.getAllRecipes();
-        const favoriteList = allRecipes.filter(recipe => likedIds.includes(recipe.id));
-        
-        setFavorites(favoriteList);
-      } catch (error) {
-        console.error("Error loading favorites:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const loadFavorites = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Loading Favorites...");
+      await RecipeAPI.initialize();
+      
+      // Get liked recipe IDs from preference service
+      const likedIds = preferenceService.getLikedRecipes();
+      console.log("Liked Recipe IDs:", likedIds);
+
+      // Filter the database
+      const allRecipes = recipeService.getAllRecipes();
+      const favoriteList = allRecipes.filter(recipe => likedIds.includes(recipe.id));
+      
+      console.log("Favorite recipes found:", favoriteList.length);
+      setFavorites(favoriteList);
+      
+      // Set default calorie goal
+      const userSettings = preferenceService.getUserSettings();
+      setUserGoals({ 
+        calorieGoal: userSettings.calorie_goal || 2000 
+      });
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    loadData();
-  }, []);
+  const handleUnlike = (recipeId, recipeName) => {
+    preferenceService.recordAction(recipeId, 'unliked');
+    console.log(`Unliked: ${recipeName}`);
+    loadFavorites(); // Refresh the list
+  };
+
+  const handleRecipePress = (recipe) => {
+    navigation.navigate('RecipeDetail', { recipe });
+  };
 
   // Helper to calculate total calories of all favorites
   const totalCalories = favorites.reduce((sum, r) => sum + (r.calories || 0), 0);
 
   const renderRecipeCard = ({ item }) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={styles.card} 
+      activeOpacity={0.7}
+      onPress={() => handleRecipePress(item)}
+    >
       <View style={styles.heartBadge}>
         <Ionicons name="heart" size={14} color="white" />
       </View>
+
+      <TouchableOpacity 
+        style={styles.unlikeButton}
+        onPress={() => handleUnlike(item.id, item.name)}
+      >
+        <Ionicons name="close" size={18} color="#FF6B6B" />
+      </TouchableOpacity>
 
       <Text style={styles.cardTitle}>{item.name}</Text>
 
@@ -176,6 +207,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  unlikeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#FFFFFF',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
   },
   cardTitle: {
     fontSize: 18,

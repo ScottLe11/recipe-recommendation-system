@@ -195,19 +195,43 @@ export function recordAction(recipeId, action) {
 }
 
 /**
- * Get liked recipes
+ * Get liked recipes (only returns recipes where latest action is 'liked')
  */
 export function getLikedRecipes() {
   const history = getUserHistory();
-  return history.filter(h => h.action === 'liked').map(h => h.recipe_id);
+  
+  // Group by recipe_id and get the most recent action for each
+  const recipeActions = {};
+  history.forEach(h => {
+    if (!recipeActions[h.recipe_id] || h.timestamp > recipeActions[h.recipe_id].timestamp) {
+      recipeActions[h.recipe_id] = h;
+    }
+  });
+  
+  // Only return recipes where the latest action is 'liked'
+  return Object.values(recipeActions)
+    .filter(h => h.action === 'liked')
+    .map(h => h.recipe_id);
 }
 
 /**
- * Get disliked recipes
+ * Get disliked recipes (only returns recipes where latest action is 'disliked')
  */
 export function getDislikedRecipes() {
   const history = getUserHistory();
-  return history.filter(h => h.action === 'disliked').map(h => h.recipe_id);
+  
+  // Group by recipe_id and get the most recent action for each
+  const recipeActions = {};
+  history.forEach(h => {
+    if (!recipeActions[h.recipe_id] || h.timestamp > recipeActions[h.recipe_id].timestamp) {
+      recipeActions[h.recipe_id] = h;
+    }
+  });
+  
+  // Only return recipes where the latest action is 'disliked'
+  return Object.values(recipeActions)
+    .filter(h => h.action === 'disliked')
+    .map(h => h.recipe_id);
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   ActivityIndicator // Added for a loading spinner
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 // 1. Import API
 import RecipeAPI from '../../src/api'; 
@@ -17,26 +18,29 @@ const HomeScreen = ({ navigation }) => {
   const [recipes, setRecipes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 3. Initialize the backend when the component mounts
-  useEffect(() => {
-    async function setupApp() {
-      try {
-        console.log("Initializing Recommendation Engine...");
-        await RecipeAPI.initialize();
-        
+  // 3. Refresh recommendations whenever Home tab comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRecommendations();
+    }, [])
+  );
 
-        // 4. Get the recommendations
-        const results = RecipeAPI.getRecommendations({ limit: 10 });
-        setRecipes(results);
-      } catch (error) {
-        console.error("Failed to load recipes:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const loadRecommendations = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Loading Recommendations...");
+      await RecipeAPI.initialize();
+      
+      // Get the recommendations (will use current pantry, preferences, and history)
+      const results = RecipeAPI.getRecommendations({ limit: 10 });
+      setRecipes(results);
+      console.log(`Loaded ${results.length} recommendations`);
+    } catch (error) {
+      console.error("Failed to load recipes:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setupApp();
-  }, []);
+  };
 
   const renderRecipeCard = ({ item, index }) => (
     <TouchableOpacity 
