@@ -100,7 +100,7 @@ const FavoritesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>My Favorites</Text>
+      <Text></Text>
 
       {/* 4. Nutrition Goal Summary Section */}
       {!isLoading && favorites.length > 0 && (

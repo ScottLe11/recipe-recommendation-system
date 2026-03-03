@@ -170,6 +170,16 @@ export function setMealType(mealType) {
 }
 
 /**
+ * Set user name
+ */
+export function setUserName(name) {
+  store.setRow('settings', 'user_name', {
+    key: 'user_name',
+    value: name
+  });
+}
+
+/**
  * Get user history
  */
 export function getUserHistory() {

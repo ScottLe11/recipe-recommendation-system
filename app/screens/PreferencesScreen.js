@@ -5,22 +5,29 @@ import {
   View, 
   TouchableOpacity, 
   SafeAreaView, 
-  ScrollView 
+  ScrollView,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import profile service
 import * as userProfile from '../../src/userProfile';
 
-const PreferencesScreen = () => {
+const PreferencesScreen = ({ navigation }) => {
+  const [userName, setUserName] = useState('Chef'); // State for the name
   const [preferences, setPreferences] = useState({
     maxCookingTime: 60,
     skillLevel: 'intermediate'
   });
 
-  // 1. Load existing preferences on mount
+  // 1. Load existing profile data on mount
   useEffect(() => {
     const profile = userProfile.getUserProfile();
+    
+    // Set the user's name
+    if (profile.name) setUserName(profile.name);
+    
+    // Set the preferences
     setPreferences({
       maxCookingTime: profile.preferences.maxCookingTime,
       skillLevel: profile.preferences.skillLevel
@@ -32,13 +39,28 @@ const PreferencesScreen = () => {
     const newPrefs = { ...preferences, [key]: value };
     setPreferences(newPrefs);
     
-    // Call bulk update function
     userProfile.updateUserProfile({
       preferences: {
         [key]: value
       }
     });
     console.log(`Updated ${key} to: ${value}`);
+  };
+
+  // 3. Handle Logout
+  const handleLogout = () => {
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out? This will return you to the login screen.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Log Out", 
+          style: "destructive",
+          onPress: () => navigation.replace('Login') 
+        }
+      ]
+    );
   };
 
   const TimeOption = ({ label, value }) => (
@@ -66,8 +88,12 @@ const PreferencesScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>Cooking Preferences</Text>
-        <Text style={styles.subHeader}>Tailor your recommendations</Text>
+        
+        {/* Personalized Header */}
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerText}>{userName}'s Preferences</Text>
+          <Text style={styles.subHeader}>Tailor your recommendations</Text>
+        </View>
 
         {/* Time Preference Section */}
         <View style={styles.section}>
@@ -101,6 +127,13 @@ const PreferencesScreen = () => {
             Changes are saved automatically and will update your Home feed.
           </Text>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#FF6B6B" />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -114,18 +147,19 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 25,
   },
-  header: {
-    paddingTop: 30,
-    alignSelf: 'center',
-    fontSize: 28,
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  headerText: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2D3436',
   },
   subHeader: {
-    alignSelf: 'center',
     fontSize: 14,
     color: '#636E72',
-    marginBottom: 30,
+    marginTop: 5,
   },
   section: {
     backgroundColor: 'white',
@@ -181,12 +215,29 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 10,
     marginTop: 10,
+    marginBottom: 30,
   },
   infoText: {
     flex: 1,
     fontSize: 12,
     color: '#636E72',
     lineHeight: 18,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  logoutText: {
+    color: '#FF6B6B',
+    fontSize: 16,
+    fontWeight: 'bold',
   }
 });
 

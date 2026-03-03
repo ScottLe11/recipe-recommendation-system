@@ -16,6 +16,8 @@ export function getUserProfile() {
   const dislikedRecipes = preferenceService.getDislikedRecipes();
   
   return {
+    name: settings.user_name || 'Chef',
+    
     preferences: {
       dietaryRestrictions: settings.dietary_restrictions || [],
       preferredCuisine: settings.preferred_cuisine || '',
@@ -38,6 +40,10 @@ export function getUserProfile() {
  * Update user profile (bulk update)
  */
 export function updateUserProfile(updates) {
+  if (updates.name !== undefined) {
+    preferenceService.setUserName(updates.name); 
+  }
+  
   if (updates.preferences) {
     const { dietaryRestrictions, preferredCuisine, maxCookingTime, skillLevel } = updates.preferences;
     

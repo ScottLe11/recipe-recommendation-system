@@ -58,7 +58,6 @@ const IngredientsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.innerContainer}>
-        <Text style={styles.header}>My Pantry</Text>
         <Text style={styles.subHeader}>Add ingredients you have on hand</Text>
 
         {/* Input Area */}

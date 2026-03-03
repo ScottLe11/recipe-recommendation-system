@@ -6,9 +6,10 @@ import {
   FlatList, 
   TouchableOpacity, 
   SafeAreaView,
-  ActivityIndicator // Added for a loading spinner
+  ActivityIndicator 
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { getUserProfile } from '../../src/userProfile';
 
 // 1. Import API
 import RecipeAPI from '../../src/api'; 
@@ -17,56 +18,77 @@ const HomeScreen = ({ navigation }) => {
   // 2. Set up state for recipes and loading status
   const [recipes, setRecipes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('Chef');
+  // Track if the first-time welcome splash has already happened
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // 3. Refresh recommendations whenever Home tab comes into focus
+  // 3. Initial App Load (Runs ONLY once when the app is first opened)
+  useEffect(() => {
+    const startup = async () => {
+      try {
+        console.log("🚀 Initial App Startup...");
+        const profile = getUserProfile();
+        if (profile?.name) setUserName(profile.name);
+
+        await RecipeAPI.initialize();
+        
+        // The 2-second delay only happens here on the very first load
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const results = RecipeAPI.getRecommendations({ limit: 10 });
+        setRecipes(results);
+        
+        setHasInitialized(true); 
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Startup error:", error);
+        setIsLoading(false);
+      }
+    };
+
+    startup();
+  }, []); // Empty array ensures this only runs once
+
+  // 4. Refresh recommendations (silent) whenever Home tab comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      loadRecommendations();
-    }, [])
+      // Only refresh data if the initial splash is already done
+      if (hasInitialized) {
+        console.log("🔄 Background refresh (no splash screen)");
+        const results = RecipeAPI.getRecommendations({ limit: 10 });
+        setRecipes(results);
+      }
+    }, [hasInitialized])
   );
 
-  const loadRecommendations = async () => {
-    try {
-      setIsLoading(true);
-      console.log("Loading Recommendations...");
-      await RecipeAPI.initialize();
-      
-      // Get the recommendations (will use current pantry, preferences, and history)
-      const results = RecipeAPI.getRecommendations({ limit: 10 });
-      setRecipes(results);
-      console.log(`Loaded ${results.length} recommendations`);
-    } catch (error) {
-      console.error("Failed to load recipes:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  // Helper to determine meal type based on current time
+  const getMealType = () => {
+    const hour = new Date().getHours();
+    if (hour < 11) return 'breakfast';
+    if (hour < 16) return 'lunch';
+    return 'dinner';
   };
 
   const renderRecipeCard = ({ item, index }) => (
     <TouchableOpacity 
       style={styles.card} 
-      // Ensure navigation is set up in App.js or ignore if testing just Home
       onPress={() => {
-      console.log(`Navigating to: ${item.name}`);
-      navigation.navigate('RecipeDetail', { recipe: item });
-    }}
+        console.log(`Navigating to: ${item.name}`);
+        navigation.navigate('RecipeDetail', { recipe: item });
+      }}
     >
       <View style={styles.rankBadge}>
         <Text style={styles.rankText}>{index + 1}</Text>
       </View>
 
-      {/* 5. Map backend fields to UI fields */}
       <Text style={styles.cardTitle}>{item.name}</Text>
 
       <View style={styles.infoContainer}>
-        {/* Use minutes from dataset */}
         <Text style={styles.infoText}>⏱ {item.minutes}m</Text>
         <Text style={styles.infoText}>📊 {item.difficulty}</Text>
-        {/* Show the match percentage from engine */}
         <Text style={styles.infoText}>🎯 {(item.totalScore * 100).toFixed(0)}%</Text>
       </View>
       
-      {/* Show the first "Explanation" reason as the description */}
       <Text style={styles.descriptionText}>
         {item.explanation ? item.explanation[0] : "Recommended for you"}
       </Text>
@@ -75,20 +97,24 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Recommended for You</Text>
-      
-      {isLoading ? (
+      {/* Show the Welcome Screen only if NOT initialized */}
+      {!hasInitialized ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#FF6B6B" />
-          <Text style={styles.loadingText}>Analyzing recipes...</Text>
+          <Text style={styles.welcomeTitle}>Welcome, {userName}!</Text>
+          <Text style={styles.loadingSubtitle}>
+            Your {getMealType()} recommendations are coming right up...
+          </Text>
         </View>
       ) : (
-        <FlatList
-          data={recipes}
-          renderItem={renderRecipeCard}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listPadding}
-        />
+        <>
+          <Text></Text>
+          <FlatList
+            data={recipes}
+            renderItem={renderRecipeCard}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.listPadding}
+          />
+        </>
       )}
     </SafeAreaView>
   );
@@ -99,10 +125,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 40,
   },
-  loadingText: {
-    marginTop: 10,
+  welcomeTitle: {
+    fontSize: 28,             
+    fontWeight: 'bold',
+    color: '#FF6B6B',         
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  loadingSubtitle: {
+    fontSize: 16,
     color: '#636E72',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontStyle: 'italic',      
   },
   container: {
     flex: 1,
