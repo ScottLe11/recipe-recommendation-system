@@ -6,62 +6,61 @@ import {
   FlatList, 
   TouchableOpacity, 
   SafeAreaView,
-  ActivityIndicator 
+  TextInput 
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getUserProfile } from '../../src/userProfile';
+import { Ionicons } from '@expo/vector-icons';
 
 // 1. Import API
 import RecipeAPI from '../../src/api'; 
 
 const HomeScreen = ({ navigation }) => {
-  // 2. Set up state for recipes and loading status
   const [recipes, setRecipes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(''); 
   const [userName, setUserName] = useState('Chef');
-  // Track if the first-time welcome splash has already happened
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // 3. Initial App Load (Runs ONLY once when the app is first opened)
+  // Initial App Load
   useEffect(() => {
     const startup = async () => {
       try {
-        console.log("🚀 Initial App Startup...");
         const profile = getUserProfile();
         if (profile?.name) setUserName(profile.name);
 
         await RecipeAPI.initialize();
         
-        // The 2-second delay only happens here on the very first load
+        // Initial delay for welcome screen
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // Load initial recommendations
         const results = RecipeAPI.getRecommendations({ limit: 10 });
         setRecipes(results);
         
         setHasInitialized(true); 
-        setIsLoading(false);
       } catch (error) {
         console.error("Startup error:", error);
-        setIsLoading(false);
       }
     };
-
     startup();
-  }, []); // Empty array ensures this only runs once
+  }, []);
 
-  // 4. Refresh recommendations (silent) whenever Home tab comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      // Only refresh data if the initial splash is already done
-      if (hasInitialized) {
-        console.log("🔄 Background refresh (no splash screen)");
-        const results = RecipeAPI.getRecommendations({ limit: 10 });
-        setRecipes(results);
-      }
-    }, [hasInitialized])
-  );
+  // Handle Search Logic via searchRecipesByText
+  useEffect(() => {
+    if (!hasInitialized) return;
 
-  // Helper to determine meal type based on current time
+    if (searchQuery.trim().length > 0) {
+      // Use existing searchRecipesByText logic
+      // This ignores pantry/preferences and searches title, tags, and description
+      const searchResults = RecipeAPI.searchRecipes(searchQuery);
+      setRecipes(searchResults.slice(0, 20)); // Limit to 20 for performance
+    } else {
+      // Back to personalized recommendations when search is cleared
+      const recommendations = RecipeAPI.getRecommendations({ limit: 10 });
+      setRecipes(recommendations);
+    }
+  }, [searchQuery, hasInitialized]);
+
   const getMealType = () => {
     const hour = new Date().getHours();
     if (hour < 11) return 'breakfast';
@@ -72,32 +71,34 @@ const HomeScreen = ({ navigation }) => {
   const renderRecipeCard = ({ item, index }) => (
     <TouchableOpacity 
       style={styles.card} 
-      onPress={() => {
-        console.log(`Navigating to: ${item.name}`);
-        navigation.navigate('RecipeDetail', { recipe: item });
-      }}
+      onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
     >
-      <View style={styles.rankBadge}>
-        <Text style={styles.rankText}>{index + 1}</Text>
-      </View>
+      {/* Show rank only in recommendation mode */}
+      {searchQuery.length === 0 && (
+        <View style={styles.rankBadge}>
+          <Text style={styles.rankText}>{index + 1}</Text>
+        </View>
+      )}
 
       <Text style={styles.cardTitle}>{item.name}</Text>
 
       <View style={styles.infoContainer}>
         <Text style={styles.infoText}>⏱ {item.minutes}m</Text>
         <Text style={styles.infoText}>📊 {item.difficulty}</Text>
-        <Text style={styles.infoText}>🎯 {(item.totalScore * 100).toFixed(0)}%</Text>
+        {/* Only show the match percentage if we are in recommendation mode */}
+        {searchQuery.length === 0 && (
+          <Text style={styles.infoText}>🎯 {(item.totalScore * 100).toFixed(0)}%</Text>
+        )}
       </View>
       
       <Text style={styles.descriptionText}>
-        {item.explanation ? item.explanation[0] : "Recommended for you"}
+        {searchQuery.length > 0 ? "Found via search" : (item.explanation ? item.explanation[0] : "Recommended for you")}
       </Text>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Show the Welcome Screen only if NOT initialized */}
       {!hasInitialized ? (
         <View style={styles.loaderContainer}>
           <Text style={styles.welcomeTitle}>Welcome, {userName}!</Text>
@@ -107,12 +108,31 @@ const HomeScreen = ({ navigation }) => {
         </View>
       ) : (
         <>
-          <Text></Text>
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={20} color="#b2bec3" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search name, tags, or description..."
+                placeholderTextColor="#b2bec3"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="always"
+              />
+            </View>
+          </View>
+
           <FlatList
-            data={recipes}
+            data={recipes} 
             renderItem={renderRecipeCard}
             keyExtractor={item => item.id.toString()}
             contentContainerStyle={styles.listPadding}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={50} color="#ccc" />
+                <Text style={styles.emptyText}>No matches found for "{searchQuery}"</Text>
+              </View>
+            }
           />
         </>
       )}
@@ -121,6 +141,11 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // Existing Styles...
+  container: {
+    flex: 1,
+    backgroundColor: '#E4E4E4',
+  },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -142,18 +167,40 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontStyle: 'italic',      
   },
-  container: {
-    flex: 1,
+  // NEW SEARCH BAR STYLES
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     backgroundColor: '#E4E4E4',
   },
-  header: {
-    paddingTop: 30,
-    alignSelf: 'center',
-    fontSize: 24,
-    fontWeight: 'bold',
-    margin: 20,
-    color: '#333',
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 50,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2D3436',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 50,
+    color: '#636E72',
+    fontSize: 16,
+  },
+  // Original Styles...
   listPadding: {
     paddingBottom: 20,
   },
