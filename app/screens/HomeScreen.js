@@ -21,6 +21,35 @@ const HomeScreen = ({ navigation }) => {
   const [userName, setUserName] = useState('Chef');
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  const [greeting, setGreeting] = useState('');
+  const [emoji, setEmoji] = useState('');
+
+
+const updateGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    setGreeting('Good morning');
+    setEmoji('☀️');
+  } else if (hour < 18) {
+    setGreeting('Good afternoon');
+    setEmoji('🌤️');
+  } else {
+    setGreeting('Good evening');
+    setEmoji('🌙');
+  }
+};
+
+useEffect(() => {
+  updateGreeting();
+
+  const interval = setInterval(() => {
+    updateGreeting();
+  }, 60000); // updates every minute
+
+  return () => clearInterval(interval);
+}, []);
+
   // Initial App Load
   useEffect(() => {
     const startup = async () => {
@@ -101,7 +130,9 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {!hasInitialized ? (
         <View style={styles.loaderContainer}>
-          <Text style={styles.welcomeTitle}>Welcome, {userName}!</Text>
+          <Text style={styles.welcomeTitle}>
+            {greeting}, {userName}! {emoji}
+          </Text>
           <Text style={styles.loadingSubtitle}>
             Your {getMealType()} recommendations are coming right up...
           </Text>
