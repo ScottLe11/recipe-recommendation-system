@@ -1,4 +1,4 @@
-import { store } from './store.js';
+import { saveUserData, store } from './store.js';
 
 /**
  * Get all pantry items
@@ -22,6 +22,8 @@ export function addPantryItem(name, quantity = 1, unit = '') {
     quantity: parseFloat(quantity) || 1,
     unit: unit || '',
   });
+
+  saveUserData();
   
   return id;
 }
@@ -36,6 +38,7 @@ export function updatePantryItem(id, quantity) {
       ...item,
       quantity: parseFloat(quantity) || 1,
     });
+    saveUserData();
   }
 }
 
@@ -44,6 +47,7 @@ export function updatePantryItem(id, quantity) {
  */
 export function removePantryItem(id) {
   store.delRow('pantry', id);
+  saveUserData();
 }
 
 /**
@@ -52,6 +56,7 @@ export function removePantryItem(id) {
 export function clearPantry() {
   const pantryIds = Object.keys(store.getTable('pantry'));
   pantryIds.forEach(id => store.delRow('pantry', id));
+  saveUserData();
 }
 
 /**

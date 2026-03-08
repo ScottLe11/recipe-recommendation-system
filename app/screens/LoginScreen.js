@@ -9,12 +9,13 @@ import {
   Alert 
 } from 'react-native';
 import { updateUserProfile } from '../../src/userProfile';
+import { loadUserData } from '../../src/store';
 
 const LoginScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (name.trim() === '' || email.trim() === '') {
       Alert.alert("Error", "Please enter a name and email.");
       return;
@@ -22,11 +23,14 @@ const LoginScreen = ({ navigation }) => {
 
     // 1. Save the name to your profile service
     // This updates the 'user_name' field added earlier
+    await loadUserData(email);
+    
     updateUserProfile({
       name: name,
-      preferences: {
-        skillLevel: 'beginner' // Default for new users
-      }
+      email: email,
+      // preferences: {
+      //   skillLevel: 'beginner' // Default for new users
+      // }
     });
 
     // 2. Navigate to the Main App

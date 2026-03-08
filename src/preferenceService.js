@@ -1,5 +1,4 @@
-import { store } from './store.js';
-
+import { saveUserData, store } from './store.js';
 /**
  * Get all user settings
  */
@@ -52,6 +51,7 @@ export function setSkillLevel(level) {
     key: 'skill_level',
     value: level
   });
+  saveUserData();
 }
 
 /**
@@ -62,6 +62,7 @@ export function setMaxCookingTime(minutes) {
     key: 'max_cooking_time',
     value: String(minutes)
   });
+  saveUserData();
 }
 
 /**
@@ -72,6 +73,7 @@ export function setPreferredCuisine(cuisine) {
     key: 'preferred_cuisine',
     value: cuisine
   });
+  saveUserData();
 }
 
 /**
@@ -83,6 +85,7 @@ export function setDietaryRestrictions(restrictions) {
     key: 'dietary_restrictions',
     value: JSON.stringify(restrictions)
   });
+  saveUserData();
 }
 
 /**
@@ -114,6 +117,7 @@ export function setCalorieGoal(calories) {
     key: 'calorie_goal',
     value: String(calories)
   });
+  saveUserData();
 }
 
 /**
@@ -124,6 +128,7 @@ export function setMaxSodium(mg) {
     key: 'max_sodium',
     value: String(mg)
   });
+  saveUserData();
 }
 
 /**
@@ -135,6 +140,7 @@ export function setTimeOfDay(timeOfDay) {
     key: 'time_of_day',
     value: timeOfDay
   });
+  saveUserData();
 }
 
 /**
@@ -146,6 +152,7 @@ export function setWeather(weather) {
     key: 'weather',
     value: weather
   });
+  saveUserData();
 }
 
 /**
@@ -156,6 +163,7 @@ export function setServings(servings) {
     key: 'servings',
     value: String(servings)
   });
+  saveUserData();
 }
 
 /**
@@ -167,6 +175,7 @@ export function setMealType(mealType) {
     key: 'meal_type',
     value: mealType
   });
+  saveUserData();
 }
 
 /**
@@ -177,6 +186,7 @@ export function setUserName(name) {
     key: 'user_name',
     value: name
   });
+  saveUserData();
 }
 
 /**
@@ -202,6 +212,8 @@ export function recordAction(recipeId, action) {
     action,
     timestamp: Date.now()
   });
+
+  saveUserData();
 }
 
 /**
