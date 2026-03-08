@@ -111,7 +111,8 @@ export async function loadUserData(email) {
       // Restore pantry
       if (userData.pantry) {
         userData.pantry.forEach(item => {
-          store.setRow('pantry', item.id || Date.now().toString(), item);
+          const { id, ...itemData } = item;
+          store.setRow('pantry', id || Date.now().toString(), itemData);
         });
       }
       
@@ -159,7 +160,10 @@ export async function saveUserData() {
     
     // Get current user's data from store
     allUsers[currentUser] = {
-      pantry: Object.values(store.getTable('pantry')),
+      pantry: Object.entries(store.getTable('pantry')).map(([id, item]) => ({
+        id,
+        ...item
+      })),
       settings: Object.fromEntries(
         Object.entries(store.getTable('settings')).map(([key, row]) => [key, row.value])
       ),
