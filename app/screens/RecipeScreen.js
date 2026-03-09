@@ -73,6 +73,7 @@ const RecipeScreen = ({ route }) => {
             <View style={styles.metaItem}>
               <Ionicons name="bar-chart-outline" size={16} color="#636E72" />
               <Text style={styles.metaText}>{recipe.difficulty}</Text>
+              <Text style={styles.metaText}>🔥 {Math.round(recipe.nutrition_parsed.calories) || 0} kcal</Text>
             </View>
           </View>
 
