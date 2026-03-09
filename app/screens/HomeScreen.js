@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // 1. Import API
 import RecipeAPI from '../../src/api'; 
+import * as preferenceService from '../../src/preferenceService';
 
 const HomeScreen = ({ navigation }) => {
   const [recipes, setRecipes] = useState([]);
@@ -24,31 +25,33 @@ const HomeScreen = ({ navigation }) => {
   const [greeting, setGreeting] = useState('');
   const [emoji, setEmoji] = useState('');
 
+  const [likedRecipes, setLikedRecipes] = useState([]);
 
-const updateGreeting = () => {
-  const hour = new Date().getHours();
 
-  if (hour < 12) {
-    setGreeting('Good morning');
-    setEmoji('☀️');
-  } else if (hour < 18) {
-    setGreeting('Good afternoon');
-    setEmoji('🌤️');
-  } else {
-    setGreeting('Good evening');
-    setEmoji('🌙');
-  }
-};
+  const updateGreeting = () => {
+    const hour = new Date().getHours();
 
-useEffect(() => {
-  updateGreeting();
+    if (hour < 12) {
+      setGreeting('Good morning');
+      setEmoji('☀️');
+    } else if (hour < 18) {
+      setGreeting('Good afternoon');
+      setEmoji('🌤️');
+    } else {
+      setGreeting('Good evening');
+      setEmoji('🌙');
+    }
+  };
 
-  const interval = setInterval(() => {
+  useEffect(() => {
     updateGreeting();
-  }, 60000); // updates every minute
 
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      updateGreeting();
+    }, 60000); // updates every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Initial App Load
   useEffect(() => {
@@ -66,6 +69,10 @@ useEffect(() => {
         const results = RecipeAPI.getRecommendations({ limit: 10 });
         setRecipes(results);
         
+        // Sync liked recipes from preference service
+        const currentlyLiked = preferenceService.getLikedRecipes();
+        setLikedRecipes(currentlyLiked);
+        
         setHasInitialized(true); 
       } catch (error) {
         console.error("Startup error:", error);
@@ -74,21 +81,43 @@ useEffect(() => {
     startup();
   }, []);
 
-  // Handle Search Logic via searchRecipesByText
+
+  // Refresh logic
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasInitialized) {
+        // Always refresh likes when screen comes into focus to stay in sync
+        const currentlyLiked = preferenceService.getLikedRecipes();
+        setLikedRecipes(currentlyLiked);
+
+        if (searchQuery.trim() === '') {
+          console.log("🔄 Home Focused: Refreshing recommendations...");
+          
+          // Refresh User Name (in case they logged out/in)
+          const profile = getUserProfile();
+          if (profile?.name) setUserName(profile.name);
+
+          // Refresh Recommendations (based on new pantry/prefs/likes)
+          const recommendations = RecipeAPI.getRecommendations({ limit: 10 });
+          setRecipes(recommendations);
+        }
+      }
+    }, [hasInitialized, searchQuery])
+  );
+
+  // Handle Search Logic
   useEffect(() => {
     if (!hasInitialized) return;
 
     if (searchQuery.trim().length > 0) {
-      // Use existing searchRecipesByText logic
-      // This ignores pantry/preferences and searches title, tags, and description
       const searchResults = RecipeAPI.searchRecipes(searchQuery);
-      setRecipes(searchResults.slice(0, 20)); // Limit to 20 for performance
+      setRecipes(searchResults.slice(0, 20)); 
     } else {
-      // Back to personalized recommendations when search is cleared
       const recommendations = RecipeAPI.getRecommendations({ limit: 10 });
       setRecipes(recommendations);
     }
   }, [searchQuery, hasInitialized]);
+
 
   const getMealType = () => {
     const hour = new Date().getHours();
@@ -97,34 +126,68 @@ useEffect(() => {
     return 'dinner';
   };
 
-  const renderRecipeCard = ({ item, index }) => (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
-    >
-      {/* Show rank only in recommendation mode */}
-      {searchQuery.length === 0 && (
-        <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>{index + 1}</Text>
-        </View>
-      )}
+  // Handle Like Toggle with recordAction
+  const handleLikePress = (recipeId) => {
+    const isCurrentlyLiked = likedRecipes.includes(recipeId);
+    
+    // Determine the action for the preference engine
+    const action = isCurrentlyLiked ? 'unliked' : 'liked';
+    
+    // 1. Persist the action in TinyBase
+    preferenceService.recordAction(recipeId, action);
 
-      <Text style={styles.cardTitle}>{item.name}</Text>
+    // 2. Update local state for immediate UI feedback
+    setLikedRecipes(prev => 
+      isCurrentlyLiked 
+        ? prev.filter(id => id !== recipeId) 
+        : [...prev, recipeId]
+    );
+    
+    console.log(`Updated TinyBase: Recipe ${recipeId} is now ${action}`);
+  };
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoText}>⏱ {item.minutes}m</Text>
-        <Text style={styles.infoText}>📊 {item.difficulty}</Text>
-        {/* Only show the match percentage if we are in recommendation mode */}
+  const renderRecipeCard = ({ item, index }) => {
+    // Check if this specific item is in the liked list
+    const isLiked = likedRecipes.includes(item.id);
+
+    return (
+      <TouchableOpacity 
+        style={styles.card} 
+        onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
+      >
+        {/* Show rank only in recommendation mode */}
         {searchQuery.length === 0 && (
-          <Text style={styles.infoText}>🎯 {(item.totalScore * 100).toFixed(0)}%</Text>
+          <View style={styles.rankBadge}>
+            <Text style={styles.rankText}>{index + 1}</Text>
+          </View>
         )}
-      </View>
-      
-      <Text style={styles.descriptionText}>
-        {searchQuery.length > 0 ? "Found via search" : (item.explanation ? item.explanation[0] : "Recommended for you")}
-      </Text>
-    </TouchableOpacity>
-  );
+
+        {/* Functional Heart Button in Top Right */}
+        <TouchableOpacity 
+          onPress={() => handleLikePress(item.id)} 
+          style={styles.likeButton}
+        >
+          <Ionicons 
+            name={isLiked ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isLiked ? "#FF6B6B" : "#b2bec3"} 
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.cardTitle}>{item.name}</Text>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoText}>⏱ {item.minutes}m</Text>
+          <Text style={styles.infoText}>📊 {item.difficulty}</Text>
+          <Text style={styles.infoText}>🔥 {Math.round(item.nutrition_parsed.calories) || 0} kcal</Text>
+        </View>
+        
+        <Text style={styles.descriptionText}>
+          {searchQuery.length > 0 ? "Found via search" : (item.explanation ? item.explanation[0] : "Recommended for you")}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -172,7 +235,6 @@ useEffect(() => {
 };
 
 const styles = StyleSheet.create({
-  // Existing Styles...
   container: {
     flex: 1,
     backgroundColor: '#E4E4E4',
@@ -198,7 +260,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontStyle: 'italic',      
   },
-  // NEW SEARCH BAR STYLES
   searchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -231,7 +292,6 @@ const styles = StyleSheet.create({
     color: '#636E72',
     fontSize: 16,
   },
-  // Original Styles...
   listPadding: {
     paddingBottom: 20,
   },
@@ -258,6 +318,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
+  },
+  likeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 15,
+    zIndex: 1,
+    padding: 5,
   },
   rankText: {
     color: 'white',
