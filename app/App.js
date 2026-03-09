@@ -42,6 +42,7 @@ import FavoritesScreen from './screens/FavoritesScreen';
 import RecipeScreen from './screens/RecipeScreen';
 import PreferencesScreen from './screens/PreferencesScreen';
 import LoginScreen from './screens/LoginScreen'; 
+import OnboardingScreen from './screens/OnboardingScreen';
 
 import * as userProfile from '../src/userProfile';
 
@@ -206,6 +207,10 @@ export default function App() {
         <RootStack.Screen 
           name="Login" 
           component={LoginScreen} 
+        />
+        <RootStack.Screen 
+          name="Onboarding" 
+          component={OnboardingScreen} 
         />
         {/* Once logged in, we move to the tabs */}
         <RootStack.Screen 
