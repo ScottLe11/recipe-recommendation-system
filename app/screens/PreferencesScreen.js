@@ -12,13 +12,17 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Import profile service
 import * as userProfile from '../../src/userProfile';
+import * as preferenceService from '../../src/preferenceService';
 
 const PreferencesScreen = ({ navigation }) => {
-  const [userName, setUserName] = useState('Chef'); // State for the name
+  const [userName, setUserName] = useState('Chef'); 
   const [preferences, setPreferences] = useState({
     maxCookingTime: 60,
     skillLevel: 'intermediate'
   });
+  const [preferredCuisine, setPreferredCuisine] = useState('');
+  // State for calorie preference
+  const [caloriePref, setCaloriePref] = useState('no pref');
 
   // 1. Load existing profile data on mount
   useEffect(() => {
@@ -32,6 +36,20 @@ const PreferencesScreen = ({ navigation }) => {
       maxCookingTime: profile.preferences.maxCookingTime,
       skillLevel: profile.preferences.skillLevel
     });
+
+    // Load nutrition/calorie goal logic
+    if (profile.nutritionGoals) {
+      const daily = profile.nutritionGoals.dailyCalories;
+      if (daily <= 1500) setCaloriePref('low');
+      else if (daily >= 3000) setCaloriePref('high');
+      else setCaloriePref('no pref');
+    }
+
+    // Load preferred cuisine from settings
+    const settings = preferenceService.getUserSettings();
+    if (settings.preferred_cuisine) {
+      setPreferredCuisine(settings.preferred_cuisine);
+    }
   }, []);
 
   // 2. Function to update and save
@@ -45,6 +63,27 @@ const PreferencesScreen = ({ navigation }) => {
       }
     });
     console.log(`Updated ${key} to: ${value}`);
+  };
+
+  // Function to update calorie preference
+  const updateCaloriePref = (value) => {
+    setCaloriePref(value);
+    const calorieMap = { 'low': 1500, 'high': 3000, 'no pref': 2000 };
+    
+    userProfile.updateUserProfile({
+      nutritionGoals: {
+        dailyCalories: calorieMap[value]
+      }
+    });
+    console.log(`Updated Calorie Goal to: ${value}`);
+  };
+
+  // Function to update cuisine
+  const updateCuisine = (cuisine) => {
+    const newValue = preferredCuisine === cuisine ? '' : cuisine; // Toggle off if already selected
+    setPreferredCuisine(newValue);
+    preferenceService.setPreferredCuisine(newValue);
+    console.log(`Updated Preferred Cuisine to: ${newValue}`);
   };
 
   // 3. Handle Logout
@@ -85,6 +124,38 @@ const PreferencesScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Calorie Toggle Component
+  const CalorieOption = ({ label, value }) => (
+    <TouchableOpacity 
+      style={[styles.optionButton, caloriePref === value && styles.selectedButton]}
+      onPress={() => updateCaloriePref(value)}
+    >
+      <Text style={[styles.optionText, caloriePref === value && styles.selectedOptionText]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const CuisineOption = ({ label }) => {
+    const isSelected = preferredCuisine.toLowerCase() === label.toLowerCase();
+    return (
+      <TouchableOpacity 
+        style={[styles.cuisineChip, isSelected && styles.selectedCuisineChip]}
+        onPress={() => updateCuisine(label.toLowerCase())}
+      >
+        <Ionicons 
+          name={isSelected ? "checkbox" : "square-outline"} 
+          size={16} 
+          color={isSelected ? "white" : "#636E72"} 
+          style={{ marginRight: 6 }}
+        />
+        <Text style={[styles.cuisineText, isSelected && styles.selectedCuisineText]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -118,6 +189,32 @@ const PreferencesScreen = ({ navigation }) => {
             <DifficultyOption label="Easy" value="easy" />
             <DifficultyOption label="Medium" value="intermediate" />
             <DifficultyOption label="Difficult" value="advanced" />
+          </View>
+        </View>
+
+        {/* Calorie Preference Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="flame-outline" size={20} color="#2D3436" />
+            <Text style={styles.sectionTitle}>Calorie Intake Goal</Text>
+          </View>
+          <View style={styles.optionsGrid}>
+            <CalorieOption label="Low" value="low" />
+            <CalorieOption label="No Pref" value="no pref" />
+            <CalorieOption label="High" value="high" />
+          </View>
+        </View>
+
+        {/* Cuisine Preference Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="restaurant-outline" size={20} color="#2D3436" />
+            <Text style={styles.sectionTitle}>Preferred Cuisine</Text>
+          </View>
+          <View style={styles.cuisineGrid}>
+            {['Italian', 'Asian', 'Mexican', 'American', 'Mediterranean', 'Indian', 'French'].map((c) => (
+              <CuisineOption key={c} label={c} />
+            ))}
           </View>
         </View>
 
@@ -209,6 +306,36 @@ const styles = StyleSheet.create({
   },
   selectedOptionText: {
     color: 'white',
+  },
+  // Cuisine specific styles
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  cuisineChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#D1D1D1',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 4,
+  },
+  selectedCuisineChip: {
+    backgroundColor: '#FF6B6B',
+    borderColor: '#FF6B6B',
+  },
+  cuisineText: {
+    fontSize: 13,
+    color: '#636E72',
+    fontWeight: '500',
+  },
+  selectedCuisineText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   infoBox: {
     flexDirection: 'row',
