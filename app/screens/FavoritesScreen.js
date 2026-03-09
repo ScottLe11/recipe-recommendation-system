@@ -68,8 +68,8 @@ const FavoritesScreen = () => {
     navigation.navigate('RecipeDetail', { recipe });
   };
 
-  // Helper to calculate total calories of all favorites
-  const totalCalories = favorites.reduce((sum, r) => sum + (r.calories || 0), 0);
+  // Helper to calculate average calories of all favorites
+  const averageCalories = favorites.length > 0 ? Math.round(favorites.reduce((sum, r) => sum + (r.nutrition_parsed?.calories || 0), 0) / favorites.length) : 0;
 
   const renderRecipeCard = ({ item }) => (
     <TouchableOpacity 
@@ -93,7 +93,7 @@ const FavoritesScreen = () => {
       <View style={styles.infoContainer}>
         <Text style={styles.infoText}>⏱ {item.minutes}m</Text>
         <Text style={styles.infoText}>📊 {item.difficulty}</Text>
-        <Text style={styles.infoText}>🔥 {item.calories || 0} kcal</Text>
+        <Text style={styles.infoText}>🔥 {Math.round(item.nutrition_parsed.calories) || 0} kcal</Text>
       </View>
     </TouchableOpacity>
   );
@@ -103,13 +103,13 @@ const FavoritesScreen = () => {
       <Text></Text>
 
       {/* 4. Nutrition Goal Summary Section */}
-      {!isLoading && favorites.length > 0 && (
+      {!isLoading &&  (
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Nutrition Insight</Text>
           <View style={styles.summaryRow}>
             <View>
-              <Text style={styles.summaryLabel}>Total Favorites Cal</Text>
-              <Text style={styles.summaryValue}>{totalCalories} kcal</Text>
+              <Text style={styles.summaryLabel}>Average Favorites Cal</Text>
+              <Text style={styles.summaryValue}>{averageCalories} kcal</Text>
             </View>
             <View style={styles.divider} />
             <View>
