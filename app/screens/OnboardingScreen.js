@@ -31,8 +31,11 @@ const OnboardingScreen = ({ navigation }) => {
     maxCookingTime: 60, 
     skillLevel: 'intermediate' 
   });
+  
   // State for Cuisine selection
   const [preferredCuisine, setPreferredCuisine] = useState('');
+  // State for Dietary selection 
+  const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
 
   // Step 3 State (Nutrition)
   const [nutri, setNutri] = useState({
@@ -64,7 +67,8 @@ const OnboardingScreen = ({ navigation }) => {
     userProfile.updateUserProfile({
       preferences: {
         maxCookingTime: prefs.maxCookingTime,
-        skillLevel: prefs.skillLevel
+        skillLevel: prefs.skillLevel,
+        dietaryRestrictions: dietaryRestrictions
       },
       nutritionGoals: {
         dailyCalories: calorieMap[nutri.calories],
@@ -92,7 +96,33 @@ const OnboardingScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Cuisine Component
+  // Dietary Component (Multi-select)
+  const DietaryOption = ({ label }) => {
+    const isSelected = dietaryRestrictions.includes(label.toLowerCase());
+    return (
+      <TouchableOpacity 
+        style={[styles.cuisineChip, isSelected && styles.selectedCuisineChip]}
+        onPress={() => {
+          const val = label.toLowerCase();
+          setDietaryRestrictions(prev => 
+            prev.includes(val) ? prev.filter(i => i !== val) : [...prev, val]
+          );
+        }}
+      >
+        <Ionicons 
+          name={isSelected ? "checkbox" : "square-outline"} 
+          size={14} 
+          color={isSelected ? "white" : "#636E72"} 
+          style={{ marginRight: 6 }}
+        />
+        <Text style={[styles.cuisineText, isSelected && styles.selectedCuisineText]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Cuisine Component 
   const CuisineOption = ({ label }) => {
     const isSelected = preferredCuisine.toLowerCase() === label.toLowerCase();
     return (
@@ -160,9 +190,9 @@ const OnboardingScreen = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Chicken, Garlic, Rice..."
+                  placeholderTextColor="#b2bec3"
                   value={ingredientName}
                   onChangeText={setIngredientName}
-                  placeholderTextColor="#b2bec3"
                 />
                 <TouchableOpacity style={styles.addButton} onPress={() => {
                   if (ingredientName.trim()) {
@@ -227,7 +257,20 @@ const OnboardingScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Cuisine Preference Section */}
+                {/* Dietary Preference Section (Multi-select) */}
+                <View style={styles.section}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="leaf-outline" size={20} color="#2D3436" />
+                    <Text style={styles.sectionTitle}>Dietary Restrictions</Text>
+                  </View>
+                  <View style={styles.cuisineGrid}>
+                    {['Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 'Keto', 'Paleo', 'Low-Sodium'].map((d) => (
+                      <DietaryOption key={d} label={d} />
+                    ))}
+                  </View>
+                </View>
+
+                {/* Cuisine Preference Section (Single-select) */}
                 <View style={styles.section}>
                   <View style={styles.sectionTitleRow}>
                     <Ionicons name="restaurant-outline" size={20} color="#2D3436" />

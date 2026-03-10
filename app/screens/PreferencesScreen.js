@@ -23,6 +23,8 @@ const PreferencesScreen = ({ navigation }) => {
   const [preferredCuisine, setPreferredCuisine] = useState('');
   // State for calorie preference
   const [caloriePref, setCaloriePref] = useState('no pref');
+  // State for dietary restrictions (Multiple Selection)
+  const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
 
   // 1. Load existing profile data on mount
   useEffect(() => {
@@ -36,6 +38,11 @@ const PreferencesScreen = ({ navigation }) => {
       maxCookingTime: profile.preferences.maxCookingTime,
       skillLevel: profile.preferences.skillLevel
     });
+
+    // Load dietary restrictions
+    if (profile.preferences.dietaryRestrictions) {
+      setDietaryRestrictions(profile.preferences.dietaryRestrictions);
+    }
 
     // Load nutrition/calorie goal logic
     if (profile.nutritionGoals) {
@@ -63,6 +70,26 @@ const PreferencesScreen = ({ navigation }) => {
       }
     });
     console.log(`Updated ${key} to: ${value}`);
+  };
+
+  // Function to toggle dietary restrictions (Multiple Choice)
+  const toggleDietaryRestriction = (restriction) => {
+    const lowerRestriction = restriction.toLowerCase();
+    let updated = [...dietaryRestrictions];
+
+    if (updated.includes(lowerRestriction)) {
+      updated = updated.filter(r => r !== lowerRestriction);
+    } else {
+      updated.push(lowerRestriction);
+    }
+
+    setDietaryRestrictions(updated);
+    userProfile.updateUserProfile({
+      preferences: {
+        dietaryRestrictions: updated
+      }
+    });
+    console.log(`Updated Dietary Restrictions to: ${updated}`);
   };
 
   // Function to update calorie preference
@@ -156,6 +183,27 @@ const PreferencesScreen = ({ navigation }) => {
     );
   };
 
+  // Dietary Restriction Chip Component
+  const DietaryOption = ({ label }) => {
+    const isSelected = dietaryRestrictions.includes(label.toLowerCase());
+    return (
+      <TouchableOpacity 
+        style={[styles.cuisineChip, isSelected && styles.selectedCuisineChip]}
+        onPress={() => toggleDietaryRestriction(label)}
+      >
+        <Ionicons 
+          name={isSelected ? "checkbox" : "square-outline"} 
+          size={16} 
+          color={isSelected ? "white" : "#636E72"} 
+          style={{ marginRight: 6 }}
+        />
+        <Text style={[styles.cuisineText, isSelected && styles.selectedCuisineText]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -202,6 +250,19 @@ const PreferencesScreen = ({ navigation }) => {
             <CalorieOption label="Low" value="low" />
             <CalorieOption label="No Pref" value="no pref" />
             <CalorieOption label="High" value="high" />
+          </View>
+        </View>
+
+        {/* Dietary Restrictions Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="leaf-outline" size={20} color="#2D3436" />
+            <Text style={styles.sectionTitle}>Dietary Restrictions</Text>
+          </View>
+          <View style={styles.cuisineGrid}>
+            {['Vegetarian', 'Vegan', 'Gluten-Free', 'Dairy-Free', 'Keto', 'Paleo', 'Low-Sodium'].map((d) => (
+              <DietaryOption key={d} label={d} />
+            ))}
           </View>
         </View>
 
