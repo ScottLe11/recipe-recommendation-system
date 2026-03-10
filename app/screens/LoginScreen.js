@@ -12,6 +12,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { updateUserProfile } from '../../src/userProfile';
 import { loadUserData } from '../../src/store';
 
+ // verifies valid email
+function validateEmail(email) {
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailPattern.test(email);
+}
+
 const LoginScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,6 +31,12 @@ const LoginScreen = ({ navigation }) => {
     const formattedEmail = email.toLowerCase().trim();
     const formattedName = name.trim();
     const USER_DATA_FILE = `${FileSystem.documentDirectory}users.json`;
+
+    console.log(formattedEmail + 'is a valid email: ' + validateEmail(email));
+    if (!validateEmail(formattedEmail)) {
+      Alert.alert("Error", "Please enter a valid email.");
+      return;
+    }
 
     try {
       // Check if the user already exists in the JSON file
